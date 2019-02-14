@@ -22,22 +22,58 @@ namespace \Drupal\staff_profile_sync;
 function staff_profile_sync_updater() {
   \Drupal\Core\Database\Database::setActiveConnection('STAFF_DB');//TODO Add this database to settings.php
   $db = \Drupal\Core\Database\Database::getConnection();
-  $data = $db->select('SELECT email FROM staff');
-  $db_netids = $data->fetchAll();
+  $data = $db->select('SELECT email, phone FROM staff');//TODO Need list of available data on database
+  $db_profiles = $data->fetchAll();
   \Drupal\Core\Database\Database::setActiveConnection();
-  $local_netids = \Drupal::entityTypeManager()->getStorage('node')->loadByProperties(['db_tracked' => 0]);
-  if ($db_netids) {
-    //Start comparing database and entities
+
+  $local_profiles = \Drupal::entityTypeManager()->getStorage('staff_profile_profile')->loadByProperties(['field_from_staff_directory' => true]);
+
+  //Only continue if connection succeded and got data from server
+  if ($db_profiles) {
+    for $entity in $local_profiles {
+      if ($entity->isPublished()) {
+        $entity->setUnpublished();
+        $entity->save();
+      }
+    }
+    //Add untracked profiles after unpublishing tracked
+    $local_profiles = array_merge($local_profiles, \Drupal::entityTypeManager()->getStorage('staff_profile_profile')->loadByProperties(['field_from_staff_directory' => false]));
+
+    //Look through records and update or create
+    while ($row = mysql_fetch_assoc($db_profiles)) {
+      found = FALSE;
+      for $entity in $local_profiles {
+        if ($row['email'] == $entity->field_email->value) {
+          $entity->field_from_staff_directory->value = true;
+          //TODO add all fields
+          $entity->field_email->value = $row['email'];
+          $entity->field_phone->value = $row['phone'];
+          $entity->setPublished();
+          $entity->save();
+          found = TRUE;
+        }
+      }
+      //Create profile for entry TODO
+      if (!found) {
+        $newEntity = EntityStorageInterface::create(array('field_email' => $row['email'], 'field_phone' => $row['phone']));
+        $newEntity->save();
+      }
+    }
   } else {
     watchdog('staff_profile', "Failed to Connect to Remote Database");
   }
-
-
-
-
 
   \Drupal::configFactory()->getEditable('staff_profile.settings')
     ->set('staff_profile_lastCron', date('Ymd'))
     ->save();
   watchdog('staff_profile', 'Finished staff directory update');
+}
+
+//Trigger on creation of new user to give them ownership
+staff_profile_User_create(Drupal\Core\Entity\EntityInterface $user) {
+  $net_id = $user->getUsername();
+  $local_profile = \Drupal::entityTypeManager()->getStorage('staff_profile_profile')->loadByProperties(['label' = $net_id]);
+  if ($local_profile[0]) {
+    $local_profile[0]->setOwner($user);
+  }
 }
