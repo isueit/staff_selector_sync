@@ -1,0 +1,43 @@
+<?php
+namespace \Drupal\staff_profile_sync;
+/**
+ * @file staff_profile_sync.module
+ * Contains staff_profile_sync.module
+ */
+
+/**
+ * Implements hook_cron()
+ */
+ function staff_profile_sync_cron() {
+   //Run once per day, currently best option unless installing ultimate cron module
+   if (\Drupal::config('staff_profile_sync.settings')->get('staff_profile_sync_last') < date('Ymd')) {
+     watchdog('staff_profile_sync', 'Starting staff directory update');
+     staff_profile_sync_updater();
+   }
+ }
+
+/**
+ * Checks server and current staff directory for changes
+ */
+function staff_profile_sync_updater() {
+  \Drupal\Core\Database\Database::setActiveConnection('STAFF_DB');//TODO Add this database to settings.php
+  $db = \Drupal\Core\Database\Database::getConnection();
+  $data = $db->select('SELECT email FROM staff');
+  $db_netids = $data->fetchAll();
+  \Drupal\Core\Database\Database::setActiveConnection();
+  $local_netids = \Drupal::entityTypeManager()->getStorage('node')->loadByProperties(['db_tracked' => 0]);
+  if ($db_netids) {
+    //Start comparing database and entities
+  } else {
+    watchdog('staff_profile', "Failed to Connect to Remote Database");
+  }
+
+
+
+
+
+  \Drupal::configFactory()->getEditable('staff_profile.settings')
+    ->set('staff_profile_lastCron', date('Ymd'))
+    ->save();
+  watchdog('staff_profile', 'Finished staff directory update');
+}

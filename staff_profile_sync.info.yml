@@ -1,0 +1,11 @@
+name: 'Staff Directory Updater'
+type: module
+description: 'Keeps sites staff directory up to date with central database'
+core: '8.x'
+version: '8.x-1.0-dev'
+package: 'ISUEO'
+dependencies:
+  - options
+  - entity_reference
+  - staff_profile
+configure: staff_profile_sync.admin_settings_form
