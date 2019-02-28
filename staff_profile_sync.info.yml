@@ -8,4 +8,4 @@ dependencies:
   - options
   - entity_reference
   - staff_profile
-configure: staff_profile_sync.admin_settings_form
+configure: staff_profile_sync.sync_settings_form

@@ -31,16 +31,23 @@ class SettingsForm extends ConfigFormBase {
      public function buildForm(array $form, FormStateInterface $form_state) {
        $config = $this->config('staff_profile_sync.settings');
        $site_vars = \Drupal::config('system.site');
-
+       $form['run_on_chron'] = [
+         '#type' => 'checkbox',
+         '#title' => t('Run sync on next Chron'),
+         '#default_value' => false,
+         '#description' => t('Check this and save the settings to run profile sync on the next chron')
+       ];
       $form['run_on_save'] = [
         '#type' => 'checkbox',
         '#title' => t('Run sync on form Submit'),
         '#default_value' => false,
         '#description' => t('Check this and save the settings to run profile sync')
       ];
-      $form['last_run'] = [
-        '#markup' => 'Last Updated on: ' + $config->get('staff_profile_sync_last'),
-      ];
+      if ($config->get('staff_profile_sync_last')>0) {
+        $form['last_run'] = [
+          '#markup' => 'Last Updated on: ' . $config->get('staff_profile_sync_last'),
+        ];
+      }
       $form['note'] = [
         '#markup' => 'Updating the database login and address must be done in the settings.php'
       ];
@@ -63,6 +70,10 @@ class SettingsForm extends ConfigFormBase {
       //If checked, run sync
       if ($form_state->getValue('run_on_save')) {
         staff_profile_sync_updater();
+      }
+      if ($form_state->getValue('run_on_chron')) {
+        $this->config('staff_profile_sync.settings')
+          ->set('staff_profile_sync_last', 0);
       }
   }
 }

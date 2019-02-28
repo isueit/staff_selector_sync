@@ -1,8 +1,8 @@
-staff_profile_sync.admin_settings_form:
-  path: '/admin/config/content/ISUEO/staff_profile_sync'
+staff_profile_sync.sync_settings_form:
+  path: 'admin/config/staff_profile_sync_settings'
   defaults:
     _form: '\Drupal\staff_profile_sync\Form\SettingsForm'
-    _title: 'Staff Profile Sync'
+    _title: 'Staff Profile Sync Settings'
   requirements:
     _permission: 'access administration pages'
     _permission: 'administer staff profile sync'
