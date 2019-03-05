@@ -3,3 +3,13 @@ staff_profile_sync.sync_settings_form:
   route_name: staff_profile_sync.sync_settings_form
   description: 'Change settings for Staff Profile Syncing'
   parent: system.admin_config_system
+
+staff_profile_sync.sync_button:
+  title: 'Sync Staff Profiles'
+  parent: system.admin_config
+  route_name: staff_profile_sync.sync_settings_form
+  weight: 100
+  options:
+    attributes:
+      target: _blank
+      class: '\Drupal\staff_profile_sync\staff_profile_sync_updater'

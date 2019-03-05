@@ -24,7 +24,7 @@ function staff_profile_sync_updater() {
   \Drupal\Core\Database\Database::setActiveConnection('STAFF_DB');//TODO Add this database to settings.php
   $db = \Drupal\Core\Database\Database::getConnection();
   $data = $db->select('SELECT email, phone FROM staff');//TODO Need list of available data on database
-  $db_profiles = $data->fetchAll();
+  $db_profiles = $data->fetchAllAssoc('email');
   \Drupal\Core\Database\Database::setActiveConnection();
 
   $local_profiles = \Drupal::entityTypeManager()->getStorage('staff_profile_profile')->loadByProperties(['field_from_staff_directory' => true]);
@@ -41,8 +41,8 @@ function staff_profile_sync_updater() {
     $local_profiles = array_merge($local_profiles, \Drupal::entityTypeManager()->getStorage('staff_profile_profile')->loadByProperties(['field_from_staff_directory' => false]));
 
     //Look through records and update or create
-    while ($row = mysql_fetch_assoc($db_profiles)) {
-      $found = FALSE;
+    while ($row = mysqli_fetch_assoc($db_profiles)) {
+      $found = false;
       foreach ($local_profiles as $entity) {
         $db_netid = explode("@",$db_profiles['email'])[0];
         if ($db_netid == $entity->label()) {
@@ -50,9 +50,10 @@ function staff_profile_sync_updater() {
           //TODO add all fields
           $entity->field_email->value = $row['email'];
           $entity->field_phone->value = $row['phone'];
+          $entity->field_from_staff_directory->value = true;
           $entity->setPublished();
           $entity->save();
-          $found = TRUE;
+          $found = true;
         }
       }
       if (!$found) {
@@ -84,23 +85,4 @@ function staff_profile_user_create(EntityInterface $entity) {
     $newEntity = EntityStorageInterface::create(array('label' => $netid));
     $newEntity->save();
   }
-}
-
-/*
- * Implements hook_toolbar()
- */
-function staff_profile_sync_menu() {
-  $items = array();
-  $items['runSync'] = array(
-    '#type' => 'toolbar_item',
-    'tab' => array(
-      '#type' => 'admin/config',
-      '#attributes' => array(
-        'placeholder' => t('Run Staff Profile Sync'),
-        'class' => array('staff_profile_sync_updater'),
-      ),
-    ),
-    '#weight' => 100,
-  );
-  return $items;
 }
