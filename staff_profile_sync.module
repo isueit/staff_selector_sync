@@ -30,7 +30,7 @@ function staff_profile_sync_updater() {
   $local_profiles = \Drupal::entityTypeManager()->getStorage('staff_profile_profile')->loadByProperties(['field_from_staff_directory' => true]);
 
   //Only continue if connection succeded and got data from server
-  if ($db_profiles) {
+  if (!empty(array_filter($db_profiles))) {
     foreach ($local_profiles as $entity) {
       if ($entity->isPublished()) {
         $entity->setUnpublished();
@@ -55,20 +55,23 @@ function staff_profile_sync_updater() {
           $found = TRUE;
         }
       }
-      //Create profile for entry TODO
       if (!$found) {
-        $newEntity = EntityStorageInterface::create(array('label' => $db_netid, 'field_email' => $row['email'], 'field_phone' => $row['phone']));
+        $newEntity = EntityStorageInterface::create(array(
+          //TODO add all fields
+          'label' => $db_netid,
+          'field_email' => $row['email'],
+          'field_phone' => $row['phone'],
+        ));
         $newEntity->save();
       }
     }
+    \Drupal::configFactory()->getEditable('staff_profile.settings')
+      ->set('staff_profile_lastCron', date('Ymd'))
+      ->save();
+    watchdog('staff_profile', 'Finished staff directory update');
   } else {
     watchdog('staff_profile', "Failed to Connect to Remote Database");
   }
-
-  \Drupal::configFactory()->getEditable('staff_profile.settings')
-    ->set('staff_profile_lastCron', date('Ymd'))
-    ->save();
-  watchdog('staff_profile', 'Finished staff directory update');
 }
 
 //Trigger on creation of new user to give them ownership
@@ -81,4 +84,23 @@ function staff_profile_user_create(EntityInterface $entity) {
     $newEntity = EntityStorageInterface::create(array('label' => $netid));
     $newEntity->save();
   }
+}
+
+/*
+ * Implements hook_toolbar()
+ */
+function staff_profile_sync_menu() {
+  $items = array();
+  $items['runSync'] = array(
+    '#type' => 'toolbar_item',
+    'tab' => array(
+      '#type' => 'admin/config',
+      '#attributes' => array(
+        'placeholder' => t('Run Staff Profile Sync'),
+        'class' => array('staff_profile_sync_updater'),
+      ),
+    ),
+    '#weight' => 100,
+  );
+  return $items;
 }
