@@ -21,11 +21,12 @@ use \Drupal\Core\Entity\EntityInterface;
  * Checks server and current staff directory for changes
  */
 function staff_profile_sync_updater() {
-  \Drupal\Core\Database\Database::setActiveConnection('STAFF_DB');//TODO Add this database to settings.php
-  $db = \Drupal\Core\Database\Database::getConnection();
-  $data = $db->select('SELECT email, phone FROM staff');//TODO Need list of available data on database
-  $db_profiles = $data->fetchAllAssoc('email');
-  \Drupal\Core\Database\Database::setActiveConnection();
+  \Drupal\Core\Database\Database::setActiveConnection('default', 'STAFF_DB');//TODO Add this database to settings.php
+  $db = \Drupal\Core\Database\Database::getConnection('default', 'STAFF_DB');
+  $data = $db->query('SELECT email, phone FROM staff_info');//TODO Need list of available data on database
+  $db_profiles = $data->fetchAll();
+  //$db_profiles = $data->fetchAssoc();
+  \Drupal\Core\Database\Database::setActiveConnection('default');
 
   $local_profiles = \Drupal::entityTypeManager()->getStorage('staff_profile_profile')->loadByProperties(['field_from_staff_directory' => true]);
 
@@ -41,7 +42,7 @@ function staff_profile_sync_updater() {
     $local_profiles = array_merge($local_profiles, \Drupal::entityTypeManager()->getStorage('staff_profile_profile')->loadByProperties(['field_from_staff_directory' => false]));
 
     //Look through records and update or create
-    while ($row = mysqli_fetch_assoc($db_profiles)) {
+    while ($row = $db_profiles->fetchAssoc()) {
       $found = false;
       foreach ($local_profiles as $entity) {
         $db_netid = explode("@",$db_profiles['email'])[0];
