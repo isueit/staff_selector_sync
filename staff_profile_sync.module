@@ -61,8 +61,7 @@ function staff_profile_sync_updater() {
           debug($db_netid);
           debug($profile);
           $entity->field_from_staff_directory->value = true;
-          //TODO add all fields
-          $entity->field_email->value = $profile->email;
+          $entity->field_email->value = $profile->email;//TODO add all fields
           $entity->field_phone->value = $profile->phone;
           $entity->field_first_name->value = $profile->fname;
           $entity->field_last_name->value = $profile->lname;
@@ -95,13 +94,24 @@ function staff_profile_sync_updater() {
 }
 
 //Trigger on creation of new user to give them ownership
-function staff_profile_user_create(EntityInterface $entity) {
-  $net_id = $entity->getUsername();
-  $local_profile = \Drupal::entityTypeManager()->getStorage('staff_profile_profile')->loadByProperties(['label' => $net_id]);
+function staff_profile_user_insert(Drupal\Core\Entity\EntityInterface $user) {
+  $net_id = $user->getUsername();
+  $local_profile = \Drupal::entityTypeManager()->getStorage('staff_profile_profile')->loadByProperties(['netid' => $net_id]);
   if ($local_profile[0]) {
-    $local_profile[0]->setOwner($entity);
+    $local_profile[0]->setOwnerId($user->id())
+      ->setOwner($user)
+      ->setOwnerId($user->id())
+      ->user_id = $user->id()
+    ->save();
   } else {
-    $newEntity = EntityStorageInterface::create(array('label' => $netid));
-    $newEntity->save();
+    $newEntity = \Drupal\staff_profile\Entity\StaffProfile::create([
+      'netid' => $net_id,
+      'field_email' => $user->getEmail(),
+      'user_id' => $user->id(),
+    ]);
+    $newEntity->setUnpublished()
+    ->setOwnerId($user->id())
+    ->setOwner($user)
+    ->save();
   }
 }
