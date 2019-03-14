@@ -1,0 +1,5 @@
+services:
+  staff_profile_sync.commands:
+    class: \Drupal\staff_profile_sync\Commands\StaffProfileSyncCommands
+    tags:
+      - { name: drush.command }

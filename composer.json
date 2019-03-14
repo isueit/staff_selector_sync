@@ -1,0 +1,12 @@
+{
+  "name": "isuit/staff_profile_sync",
+  "type": "drupal-custom-module",
+  "description": "Module to Create sync staff_profile content type",
+  "extra": {
+      "drush": {
+          "services": {
+              "drush.services.yml": "^9"
+          }
+      }
+  }
+}
