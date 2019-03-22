@@ -17,7 +17,7 @@ class StaffProfileSyncCommands extends DrushCommands {
    *  Used to sync staff profile entities.
    *
    * @command staff_profile_sync:sync
-   * @aliases sync-profiles
+   * @aliases staff-sync
    */
   public function syncProfiles() {
     drush_print("Staff Profile Sync Started");

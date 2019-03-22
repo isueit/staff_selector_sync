@@ -71,6 +71,7 @@ class SettingsForm extends ConfigFormBase {
       if ($form_state->getValue('run_on_save')) {
         staff_profile_sync_updater();
       }
+      //Set time of last sync to zero so it runs on next chron
       if ($form_state->getValue('run_on_chron')) {
         $this->config('staff_profile_sync.settings')
           ->set('staff_profile_sync_last', 0);

@@ -2,7 +2,7 @@
 Drupal 8 module to sync staff profile entities with data found in a central database
 
 ## Updating Staff Profiles
-Staff profiles are created or updated in the following circumstances:
+Staff profiles are created and/or updated in the following circumstances:
 * The site's chron is run once a day
 * An admin sets the sync to run on the next chron through config > system > Staff Profile Sync Settings and the site's chron is run
 * An admin runs sync manually through config > system > Staff Profile Sync Settings
@@ -17,4 +17,4 @@ This addon takes data from a secondary database and incorporates it into your si
 The address and authentication information can be found in the [staff_profile_sync.module](staff_profile_sync.module) file. This should be changed prior to your deployment. Do not commit your changes to this database connection to this repository.
 
 ## Prerequisites
-The staff_profile entity module must be installed before this module can be enabled
+ - staff_profile module
