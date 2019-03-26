@@ -46,12 +46,13 @@ function staff_profile_sync_updater() {
 
   //Only continue if connection succeded and got data from server
   if (!empty(array_filter($db_profiles))) {
+    $unpublished = 0;
     foreach ($local_profiles as $node) {
-      if ($node->isPublished()) {
-        $node->setUnpublished();
-        $node->save();
-      }
+      $node->setUnpublished();
+      $node->save();
+      $unpublished++;
     }
+    debug($unpublished);
     //Add untracked profiles after unpublishing tracked
     $nids = \Drupal::entityQuery('node')->condition('type','staff_profile')->execute();
     $local_profiles = \Drupal\node\Entity\Node::loadMultiple($nids);
@@ -72,7 +73,7 @@ function staff_profile_sync_updater() {
           $entity->field_phone->value = $profile->phone;
           $entity->field_first_name->value = $profile->fname;
           $entity->field_last_name->value = $profile->lname;
-          $entity->field_from_staff_directory->value = true;
+          $entity->field_from_database->value = true;
           $entity->setPublished();
           $entity->save();
           $found = true;
@@ -87,7 +88,7 @@ function staff_profile_sync_updater() {
           'field_phone' => $profile->phone,
           'field_first_name' => $profile->fname,
           'field_last_name' => $profile->lname,
-          'field_from_staff_directory' => true,
+          'field_from_database' => true,
         ]);
         $node->setPublished();
         $node->save();
@@ -97,7 +98,7 @@ function staff_profile_sync_updater() {
     \Drupal::configFactory()->getEditable('staff_profile.settings')
       ->set('staff_profile_lastCron', date('Ymd'))
       ->save();
-    \Drupal::logger('staff_profile_sync')->info("Staff Profile Sync Succeded. \r\n" . $updated . " Profile(s) updated and " . $created . " Profile(s) created.");
+    \Drupal::logger('staff_profile_sync')->info("Staff Profile Sync Succeded. \r\n" . $updated . " Profile(s) updated and " . $created . " Profile(s) created. ");
   } else {
     \Drupal::logger('staff_profile_sync')->error('Failed to Connect to Remote Database');
   }
@@ -105,18 +106,18 @@ function staff_profile_sync_updater() {
 
 //Trigger on creation of new user to give them ownership
 function staff_profile_user_insert(Drupal\Core\Entity\EntityInterface $user) {
-  $net_id = $user->getUsername();
-  $nid = \Drupal::entityQuery('node')->condition('type','staff_profile')->condition('field_email', $user->getEmail())->execute();
-  $local_profiles = \Drupal\node\Entity\Node::load($nid);
-  if ($local_profile[0]) {
-    $local_profile[0]->setOwnerId($user->id())
-      ->setOwner($user)
-    ->save();
+  $nid = \Drupal::entityQuery('node')->condition('field_email', $user->getEmail())->condition('type','staff_profile')->execute();
+  $local_profiles = \Drupal\node\Entity\Node::loadMultiple($nid);
+  if (count($local_profiles) >= 1) {
+    foreach ($local_profiles as $profile) {
+      $profile->setOwner($user)
+      ->save();
+      break;
+    }
   } else {
     $node = Node::create([
       'type' => 'staff_profile',
       'field_email' => $user->getEmail(),
-      'field_phone' => $profile->phone,
     ]);
     $node->setUnpublished()
     ->setOwner($user)
