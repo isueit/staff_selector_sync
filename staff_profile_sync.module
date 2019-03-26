@@ -2,6 +2,7 @@
 
 use \Drupal\Core\Entity\EntityInterface;
 use \Drupal\Core\Entity\EntityStorageInterface;
+use \Drupal\node\Entity\Node;
 
 /**
  * @file staff_profile_sync.module
@@ -40,18 +41,20 @@ function staff_profile_sync_updater() {
   $db_profiles = $data->fetchAll();
   \Drupal\Core\Database\Database::setActiveConnection('default');
 
-  $local_profiles = \Drupal::entityTypeManager()->getStorage('staff_profile_profile')->loadByProperties(['field_from_staff_directory' => true]);
+  $nids = \Drupal::entityQuery('node')->condition('type','staff_profile')->condition('field_from_database', true)->execute();
+  $local_profiles = \Drupal\node\Entity\Node::loadMultiple($nids);
 
   //Only continue if connection succeded and got data from server
   if (!empty(array_filter($db_profiles))) {
-    foreach ($local_profiles as $entity) {
-      if ($entity->isPublished()) {
-        $entity->setUnpublished();
-        $entity->save();
+    foreach ($local_profiles as $node) {
+      if ($node->isPublished()) {
+        $node->setUnpublished();
+        $node->save();
       }
     }
     //Add untracked profiles after unpublishing tracked
-    $local_profiles = array_merge($local_profiles, \Drupal::entityTypeManager()->getStorage('staff_profile_profile')->loadByProperties(['field_from_staff_directory' => false]));
+    $nids = \Drupal::entityQuery('node')->condition('type','staff_profile')->execute();
+    $local_profiles = \Drupal\node\Entity\Node::loadMultiple($nids);
 
     //Log reporting
     \Drupal::logger('staff_profile_sync')->info(count($local_profiles) . " Local staff_profile entities found. \r\n " . count($db_profiles) . " Database entries found.");
@@ -63,7 +66,7 @@ function staff_profile_sync_updater() {
       foreach ($local_profiles as $entity) {
         $db_netid = explode("@",$profile->email)[0];
         //Allow match from netid or start of email
-        if (($db_netid == $entity->label() && $entity->label() != "") || ($db_netid == explode("@", $entity->field_email->value)[0] && explode("@", $entity->field_email->value)[1] == $netid_domain)) {
+        if (($db_netid == explode("@", $entity->field_email->value)[0] && explode("@", $entity->field_email->value)[1] == $netid_domain)){
           $entity->field_from_staff_directory->value = true;
           $entity->field_email->value = $profile->email;//TODO add all fields
           $entity->field_phone->value = $profile->phone;
@@ -77,23 +80,24 @@ function staff_profile_sync_updater() {
         }
       }
       if (!$found) {
-        $newEntity = \Drupal\staff_profile\Entity\StaffProfile::create([
-          'netid' => $db_netid,//TODO add all elements
+        $node = Node::create([
+          'type' => 'staff_profile',
+          'title' => $profile->fname . $profile->lname,
           'field_email' => $profile->email,
           'field_phone' => $profile->phone,
           'field_first_name' => $profile->fname,
           'field_last_name' => $profile->lname,
           'field_from_staff_directory' => true,
         ]);
-        $newEntity->setPublished();
-        $newEntity->save();
+        $node->setPublished();
+        $node->save();
         $created++;
       }
     }
     \Drupal::configFactory()->getEditable('staff_profile.settings')
       ->set('staff_profile_lastCron', date('Ymd'))
       ->save();
-    \Drupal::logger('staff_profile_sync')->info("Staff Profile Sync Succeded. \r\n" . $updated . " Profiles updated and " . $created . " Profiles created.");
+    \Drupal::logger('staff_profile_sync')->info("Staff Profile Sync Succeded. \r\n" . $updated . " Profile(s) updated and " . $created . " Profile(s) created.");
   } else {
     \Drupal::logger('staff_profile_sync')->error('Failed to Connect to Remote Database');
   }
@@ -102,21 +106,19 @@ function staff_profile_sync_updater() {
 //Trigger on creation of new user to give them ownership
 function staff_profile_user_insert(Drupal\Core\Entity\EntityInterface $user) {
   $net_id = $user->getUsername();
-  $local_profile = \Drupal::entityTypeManager()->getStorage('staff_profile_profile')->loadByProperties(['netid' => $net_id]);
+  $nid = \Drupal::entityQuery('node')->condition('type','staff_profile')->condition('field_email', $user->getEmail())->execute();
+  $local_profiles = \Drupal\node\Entity\Node::load($nid);
   if ($local_profile[0]) {
     $local_profile[0]->setOwnerId($user->id())
       ->setOwner($user)
-      ->setOwnerId($user->id())
-      ->user_id = $user->id()
     ->save();
   } else {
-    $newEntity = \Drupal\staff_profile\Entity\StaffProfile::create([
-      'netid' => $net_id,
+    $node = Node::create([
+      'type' => 'staff_profile',
       'field_email' => $user->getEmail(),
-      'user_id' => $user->id(),
+      'field_phone' => $profile->phone,
     ]);
-    $newEntity->setUnpublished()
-    ->setOwnerId($user->id())
+    $node->setUnpublished()
     ->setOwner($user)
     ->save();
   }
