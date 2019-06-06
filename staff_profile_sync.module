@@ -22,80 +22,84 @@ use \Drupal\Core\Entity\EntityStorageInterface;
  * Checks server and current staff directory for changes
  */
 function staff_profile_sync_updater() {
-  \Drupal::logger('staff_profile_sync')->info('Starting staff directory update');
-  $netid_domain = "iastate.edu";
-  \Drupal\Core\Database\Database::addConnectionInfo('staff_db', 'default', array( //TODO update connetion with correct information
-    'database' => 'staff_info',
-    'username' => 'root',
-    'password' => 'password',
-    'prefix' => '',
-    'host' => php_sapi_name() == 'cli' || php_sapi_name() == 'apache2handler' ? 'localhost' : '127.0.0.1',//command ('cli') and GUI ('apache2handler') use localhost
-    'port' => '3306',
-    'namespace' => 'Drupal\\Core\\Database\\Driver\\mysql',
-    'driver' => 'mysql',
-  ));
-  \Drupal\Core\Database\Database::setActiveConnection('staff_db');
-  $db = \Drupal\Core\Database\Database::getConnection('default','staff_db');
-  $data = $db->query('SELECT email, phone, fname, lname FROM staff_info');//TODO Need list of available data on database
-  $db_profiles = $data->fetchAll();
-  \Drupal\Core\Database\Database::setActiveConnection('default');
+  try {
+    \Drupal::logger('staff_profile_sync')->info('Starting staff directory update');
+    $netid_domain = "iastate.edu";
+    \Drupal\Core\Database\Database::addConnectionInfo('staff_db', 'default', array( //TODO update connetion with correct information
+      'database' => 'staff_info',
+      'username' => 'root',
+      'password' => 'password',
+      'prefix' => '',
+      'host' => php_sapi_name() == 'cli' || php_sapi_name() == 'apache2handler' ? 'localhost' : '127.0.0.1',//command ('cli') and GUI ('apache2handler') use localhost
+      'port' => '3306',
+      'namespace' => 'Drupal\\Core\\Database\\Driver\\mysql',
+      'driver' => 'mysql',
+    ));
+    \Drupal\Core\Database\Database::setActiveConnection('staff_db');
+    $db = \Drupal\Core\Database\Database::getConnection('default','staff_db');
+    $data = $db->query('SELECT email, phone, fname, lname FROM staff_info');//TODO Need list of available data on database
+    $db_profiles = $data->fetchAll();
+    \Drupal\Core\Database\Database::setActiveConnection('default');
 
-  $local_profiles = \Drupal::entityTypeManager()->getStorage('staff_profile_profile')->loadByProperties(['field_from_staff_directory' => true]);
+    $local_profiles = \Drupal::entityTypeManager()->getStorage('staff_profile_profile')->loadByProperties(['field_from_staff_directory' => true]);
 
-  //Only continue if connection succeded and got data from server
-  if (!empty(array_filter($db_profiles))) {
-    foreach ($local_profiles as $entity) {
-      if ($entity->isPublished()) {
-        $entity->setUnpublished();
-        $entity->save();
-      }
-    }
-    //Add untracked profiles after unpublishing tracked
-    $local_profiles = array_merge($local_profiles, \Drupal::entityTypeManager()->getStorage('staff_profile_profile')->loadByProperties(['field_from_staff_directory' => false]));
-
-    //Log reporting
-    \Drupal::logger('staff_profile_sync')->info(count($local_profiles) . " Local staff_profile entities found. \r\n " . count($db_profiles) . " Database entries found.");
-    $updated = 0;//Does not mean they were changed, only found
-    $created = 0;
-    //Look through records and update or create
-    foreach ($db_profiles as $profile) {
-      $found = false;
+    //Only continue if connection succeded and got data from server
+    if (!empty(array_filter($db_profiles))) {
       foreach ($local_profiles as $entity) {
-        $db_netid = explode("@",$profile->email)[0];
-        //Allow match from netid or start of email
-        if (($db_netid == $entity->label() && $entity->label() != "") || ($db_netid == explode("@", $entity->field_email->value)[0] && explode("@", $entity->field_email->value)[1] == $netid_domain)) {
-          $entity->field_from_staff_directory->value = true;
-          $entity->field_email->value = $profile->email;//TODO add all fields
-          $entity->field_phone->value = $profile->phone;
-          $entity->field_first_name->value = $profile->fname;
-          $entity->field_last_name->value = $profile->lname;
-          $entity->field_from_staff_directory->value = true;
-          $entity->setPublished();
+        if ($entity->isPublished()) {
+          $entity->setUnpublished();
           $entity->save();
-          $found = true;
-          $updated++;
         }
       }
-      if (!$found) {
-        $newEntity = \Drupal\staff_profile\Entity\StaffProfile::create([
-          'netid' => $db_netid,//TODO add all elements
-          'field_email' => $profile->email,
-          'field_phone' => $profile->phone,
-          'field_first_name' => $profile->fname,
-          'field_last_name' => $profile->lname,
-          'field_from_staff_directory' => true,
-        ]);
-        $newEntity->setPublished();
-        $newEntity->save();
-        $created++;
+      //Add untracked profiles after unpublishing tracked
+      $local_profiles = array_merge($local_profiles, \Drupal::entityTypeManager()->getStorage('staff_profile_profile')->loadByProperties(['field_from_staff_directory' => false]));
+
+      //Log reporting
+      \Drupal::logger('staff_profile_sync')->info(count($local_profiles) . " Local staff_profile entities found. \r\n " . count($db_profiles) . " Database entries found.");
+      $updated = 0;//Does not mean they were changed, only found
+      $created = 0;
+      //Look through records and update or create
+      foreach ($db_profiles as $profile) {
+        $found = false;
+        foreach ($local_profiles as $entity) {
+          $db_netid = explode("@",$profile->email)[0];
+          //Allow match from netid or start of email
+          if (($db_netid == $entity->label() && $entity->label() != "") || ($db_netid == explode("@", $entity->field_email->value)[0] && explode("@", $entity->field_email->value)[1] == $netid_domain)) {
+            $entity->field_from_staff_directory->value = true;
+            $entity->field_email->value = $profile->email;//TODO add all fields
+            $entity->field_phone->value = $profile->phone;
+            $entity->field_first_name->value = $profile->fname;
+            $entity->field_last_name->value = $profile->lname;
+            $entity->field_from_staff_directory->value = true;
+            $entity->setPublished();
+            $entity->save();
+            $found = true;
+            $updated++;
+          }
+        }
+        if (!$found) {
+          $newEntity = \Drupal\staff_profile\Entity\StaffProfile::create([
+            'netid' => $db_netid,//TODO add all elements
+            'field_email' => $profile->email,
+            'field_phone' => $profile->phone,
+            'field_first_name' => $profile->fname,
+            'field_last_name' => $profile->lname,
+            'field_from_staff_directory' => true,
+          ]);
+          $newEntity->setPublished();
+          $newEntity->save();
+          $created++;
+        }
       }
+      \Drupal::configFactory()->getEditable('staff_profile.settings')
+        ->set('staff_profile_lastCron', date('Ymd'))
+        ->save();
+      \Drupal::logger('staff_profile_sync')->info("Staff Profile Sync Succeded. \r\n" . $updated . " Profiles updated and " . $created . " Profiles created.");
+    } else {
+      \Drupal::logger('staff_profile_sync')->error('Failed to find entries on Database.');
     }
-    \Drupal::configFactory()->getEditable('staff_profile.settings')
-      ->set('staff_profile_lastCron', date('Ymd'))
-      ->save();
-    \Drupal::logger('staff_profile_sync')->info("Staff Profile Sync Succeded. \r\n" . $updated . " Profiles updated and " . $created . " Profiles created.");
-  } else {
-    \Drupal::logger('staff_profile_sync')->error('Failed to Connect to Remote Database');
+  } catch (Drupal\Core\Database\DatabaseException $e) {
+    \Drupal::logger('staff_profile_sync')->warning('Database Exception: Sync Failed');
   }
 }
 
