@@ -54,21 +54,23 @@ function staff_profile_sync_updater() {
 
   while ($profile = sqlsrv_fetch_object($results)) {
     $found = false;
+
+    $taxonomy = taxonomy_term_load_multiple_by_name($profile->CountyName, 'counties-in-iowa');
+    $base_county = (!empty($taxonomy) ? array_keys($taxonomy)[0] : "");
+
+    $counties_array = explode(", ", $profile->CountiesServed);
+    $counties_served = array();
+    foreach ($counties_array as $county) {
+      $taxon = taxonomy_term_load_multiple_by_name($county, 'counties-in-iowa');
+      array_push($counties_served, (!empty($taxon) ? array_keys($taxon)[0] : ""));
+    }
+
     foreach ($local_profiles as $entity) {
       $db_netid = explode("@",$profile->email)[0];
 
-      $properties = ['name' => $profile->CountyName];
-      $taxonomy = \Drupal::entityManager()->getStorage('taxonomy_term')->loadByProperties($properties);
-      $base_county = reset($taxonomy);
-      $properties = ['name' => $profile->CountiesServed];
-      $taxonomy = \Drupal::entityManager()->getStorage('taxonomy_term')->loadByProperties($properties);
-      foreach ($taxonomy as $c) {
-        $counties_served[] = $c->id();
-      }
-
       //Allow match from netid or start of email
       if (($db_netid == $entity->label() && $entity->label() != "") || ($db_netid == explode("@", $entity->field_email->value)[0] && explode("@", $entity->field_email->value)[1] == $netid_domain)) {
-        $entity->field_program_area_s_->value = $profile->ProgramAreaName;
+        $entity->field_program_area_s_->value = $profile->ProgramAreas;
         $entity->field_first_name->value = $profile->FirstName;
         $entity->field_last_name->value = $profile->LastName;
         $entity->field_email->value = $profile->email;
@@ -83,8 +85,8 @@ function staff_profile_sync_updater() {
         $entity->field_location->value = $profile->Location;
         $entity->field_department_id->value = $profile->DepartmentName;
         //$entity->field_position_title->value = $profile->UniversityTitle; //Users may want to change
-        // $entity->field_base_county->value = $base_county->id();
-        // $entity->field_counties_served->value = $counties_served;
+        $entity->field_base_county->value = $base_county;
+        $entity->field_counties_served->value = $counties_served;
 
         $entity->field_from_staff_directory->value = true;
         $entity->setPublished();
@@ -109,9 +111,9 @@ function staff_profile_sync_updater() {
         'field_location' => $profile->Location,
         'field_department_id' => $profile->DepartmentName,
         'field_position_title' => $profile->UniversityTitle,
-        'field_program_area_s_' => $profile->ProgramAreaName,
-        // 'field_base_county' => $base_county->id(),
-        // 'field_counties_served' => $counties_served,
+        'field_program_area_s_' => $profile->ProgramAreas,
+        'field_base_county' => $base_county,
+        'field_counties_served' => $counties_served,
         'field_from_staff_directory' => true,
       ]);
       $newEntity->setPublished();
