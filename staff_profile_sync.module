@@ -2,6 +2,7 @@
 
 use \Drupal\Core\Entity\EntityInterface;
 use \Drupal\Core\Entity\EntityStorageInterface;
+use \Drupal\encrypt\Entity\EncryptionProfile;
 
 /**
  * @file staff_profile_sync.module
@@ -39,11 +40,13 @@ function staff_profile_sync_updater() {
   $updated = 0;//Does not mean they were changed, only found
   $created = 0;
 
-  // NOTE: Replace with creds
-  $myServer = "example.com";
-  $myUser = "root";
-  $myPass = "password";
-  $myDB = "database";
+  // TODO: Replace with config
+  $config = \Drupal::config('staff_profile_sync.settings');
+  $encrypt_profile = EncryptionProfile::load($config->get('sync_encrypt_profile'));
+  $myServer = $config->get('db_address');
+  $myUser = $config->get('db_username');
+  $myPass = \Drupal::service('encryption')->decrypt( $config->get('db_password'), $encryption_profile);
+  $myDB = $config->get('db_database');
 
   $dbhandle = sqlsrv_connect($myServer, array("Database" => $myDB, "UID" => $myUser, "PWD" => $myPass))
     or die("Couldn't connect to SQL Server on $myServer");
@@ -70,23 +73,23 @@ function staff_profile_sync_updater() {
 
       //Allow match from netid or start of email
       if (($db_netid == $entity->label() && $entity->label() != "") || ($db_netid == explode("@", $entity->field_email->value)[0] && explode("@", $entity->field_email->value)[1] == $netid_domain)) {
-        $entity->field_program_area_s_->value = $profile->ProgramAreas;
-        $entity->field_first_name->value = $profile->FirstName;
-        $entity->field_last_name->value = $profile->LastName;
-        $entity->field_email->value = $profile->email;
-        $entity->field_address_1->value = $profile->Address1;
-        $entity->field_address_2->value = $profile->Address2;
-        $entity->field_city->value = $profile->City;
-        $entity->field_state->value = $profile->State;
-        $entity->field_zip->value = $profile->Zip;
-        $entity->field_phone->value = $profile->Phone;
-        $entity->field_fax->value = $profile->Fax;
-        $entity->field_base_region->value = $profile->ExtensionArea;
-        $entity->field_location->value = $profile->Location;
-        $entity->field_department_id->value = $profile->DepartmentName;
-        //$entity->field_position_title->value = $profile->UniversityTitle; //Users may want to change
-        $entity->field_base_county->value = $base_county;
-        $entity->field_counties_served->value = $counties_served;
+        $entity->field_program_area_s_->value = $profile->ProgramAreas;#TODO gray out
+        //$entity->field_first_name->value = $profile->FirstName; # Can change
+        $entity->field_last_name->value = $profile->LastName; #TODO gray out
+        $entity->field_email->value = $profile->email;#TODO gray out
+        $entity->field_address_1->value = $profile->Address1;#TODO gray out
+        $entity->field_address_2->value = $profile->Address2;#TODO gray out
+        $entity->field_city->value = $profile->City;#TODO gray out
+        $entity->field_state->value = $profile->State;#TODO gray out
+        $entity->field_zip->value = $profile->Zip;#TODO gray out
+        $entity->field_phone->value = $profile->Phone; #TODO gray out
+        //$entity->field_phone_2->value = $profile->Fax;
+        $entity->field_extension_region->value = $profile->ExtensionArea; #TODO gray out
+        $entity->field_location->value = $profile->Location;#TODO gray out
+        $entity->field_department_id->value = $profile->DepartmentName;#TODO gray out
+        //$entity->field_position_title->value = $profile->UniversityTitle; # Can change
+        $entity->field_base_county->value = $base_county;#TODO gray out
+        $entity->field_counties_served->value = $counties_served;#TODO gray out
 
         $entity->field_from_staff_directory->value = true;
         $entity->setPublished();
@@ -106,8 +109,8 @@ function staff_profile_sync_updater() {
         'field_state' => $profile->State,
         'field_zip' => $profile->Zip,
         'field_phone' => $profile->Phone,
-        'field_fax' => $profile->Fax,
-        'field_base_region' => $profile->ExtensionArea,
+        //'field_phone_2' => $profile->Fax,
+        'field_extension_region' => $profile->ExtensionArea,
         'field_location' => $profile->Location,
         'field_department_id' => $profile->DepartmentName,
         'field_position_title' => $profile->UniversityTitle,
@@ -125,27 +128,4 @@ function staff_profile_sync_updater() {
     ->set('staff_profile_lastCron', date('Ymd'))
     ->save();
   \Drupal::logger('staff_profile_sync')->info("Staff Profile Sync Succeded. \r\n" . $updated . " Profiles updated and " . $created . " Profiles created.");
-}
-
-//Trigger on creation of new user to give them ownership
-function staff_profile_user_insert(Drupal\Core\Entity\EntityInterface $user) {
-  $net_id = $user->getUsername();
-  $local_profile = \Drupal::entityTypeManager()->getStorage('staff_profile_profile')->loadByProperties(['netid' => $net_id]);
-  if ($local_profile[0]) {
-    $local_profile[0]->setOwnerId($user->id())
-      ->setOwner($user)
-      ->setOwnerId($user->id())
-      ->user_id = $user->id()
-    ->save();
-  } else {
-    $newEntity = \Drupal\staff_profile\Entity\StaffProfile::create([
-      'netid' => $net_id,
-      'field_email' => $user->getEmail(),
-      'user_id' => $user->id(),
-    ]);
-    $newEntity->setUnpublished()
-    ->setOwnerId($user->id())
-    ->setOwner($user)
-    ->save();
-  }
 }

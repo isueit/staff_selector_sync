@@ -1,1 +1,6 @@
 staff_profile_sync_last: 0 #Update on next chron run
+db_username: "Please Set"
+db_password: "Not Visible"
+db_address: "Please Set"
+db_database: "Please Set"
+sync_encrypt_profile: ""

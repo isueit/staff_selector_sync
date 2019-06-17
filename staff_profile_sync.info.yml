@@ -6,4 +6,6 @@ version: '8.x-1.0-dev'
 package: 'ISUEO'
 dependencies:
   - staff_profile
+  - encrypt
+  - key
 configure: staff_profile_sync.sync_settings_form
