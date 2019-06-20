@@ -73,23 +73,23 @@ function staff_profile_sync_updater() {
 
       //Allow match from netid or start of email
       if (($db_netid == $entity->label() && $entity->label() != "") || ($db_netid == explode("@", $entity->field_email->value)[0] && explode("@", $entity->field_email->value)[1] == $netid_domain)) {
-        $entity->field_program_area_s_->value = $profile->ProgramAreas;#TODO gray out
+        $entity->field_program_area_s_->value = $profile->ProgramAreas;
         //$entity->field_first_name->value = $profile->FirstName; # Can change
-        $entity->field_last_name->value = $profile->LastName; #TODO gray out
-        $entity->field_email->value = $profile->email;#TODO gray out
-        $entity->field_address_1->value = $profile->Address1;#TODO gray out
-        $entity->field_address_2->value = $profile->Address2;#TODO gray out
-        $entity->field_city->value = $profile->City;#TODO gray out
-        $entity->field_state->value = $profile->State;#TODO gray out
-        $entity->field_zip->value = $profile->Zip;#TODO gray out
-        $entity->field_phone->value = $profile->Phone; #TODO gray out
+        $entity->field_last_name->value = $profile->LastName;
+        $entity->field_email->value = $profile->email;
+        $entity->field_address_1->value = $profile->Address1;
+        $entity->field_address_2->value = $profile->Address2;
+        $entity->field_city->value = $profile->City;
+        $entity->field_state->value = $profile->State;
+        $entity->field_zip->value = $profile->Zip;
+        $entity->field_phone->value = $profile->Phone;
         //$entity->field_phone_2->value = $profile->Fax;
-        $entity->field_extension_region->value = $profile->ExtensionArea; #TODO gray out
-        $entity->field_location->value = $profile->Location;#TODO gray out
-        $entity->field_department_id->value = $profile->DepartmentName;#TODO gray out
+        $entity->field_extension_region->value = $profile->ExtensionArea;
+        $entity->field_location->value = $profile->Location;
+        $entity->field_department_id->value = $profile->DepartmentName;
         //$entity->field_position_title->value = $profile->UniversityTitle; # Can change
-        $entity->field_base_county->value = $base_county;#TODO gray out
-        $entity->field_counties_served->value = $counties_served;#TODO gray out
+        $entity->field_base_county->value = $base_county;
+        $entity->field_counties_served->value = $counties_served;#TODO check if list duplicated
 
         $entity->field_from_staff_directory->value = true;
         $entity->setPublished();
