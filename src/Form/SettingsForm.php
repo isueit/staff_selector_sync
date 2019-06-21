@@ -81,6 +81,14 @@ class SettingsForm extends ConfigFormBase {
         '#default_value' => $config->get('db_database'),
       );
 
+      $form['smugmug_pwd'] = array(
+        '#type' => 'password',
+        '#title' => $this->t('Smugmug Password'),
+        '#description' => $this->t('The password to unlock the SmugMug Staff Portrait Album. This is not a secure data storage. This field will appear blank even with a password saved.'),
+        '#size' => 64,
+        '#default_value' => $this->t(""),
+      ); #TODO do we want to use different encryption profile?
+
       // List of encryption profiles for selector
       $encrypt_ids = \Drupal::entityQuery('encryption_profile')->execute();
       $encrypt_list = array();
@@ -96,6 +104,7 @@ class SettingsForm extends ConfigFormBase {
         '#options' => $encrypt_list,
         '#default_value' => $config->get('sync_encrypt_profile'),
       );
+
 
       return parent::buildForm($form, $form_state);
     }
@@ -115,6 +124,14 @@ class SettingsForm extends ConfigFormBase {
         $form_state->setValue('password', $saved_pwd);
       } else {
         $form_state->setValue('password', \Drupal::service('encryption')->encrypt($new_pwd, $encrypt_profile));
+      }
+
+      $saved_pwd_smug = $config->get('smug_mug_password');
+      $new_pwd_smug = $form_state->getValue('smugmug_pwd');
+      if (empty($new_pwd_smug)) {
+        $form_state->setValue('smugmug_pwd', $saved_pwd_smug);
+      } else {
+        $form_state->setValue('smugmug_pwd', \Drupal::service('encryption')->encrypt($new_pwd_smug, $encrypt_profile));
       }
     }
 
@@ -137,6 +154,7 @@ class SettingsForm extends ConfigFormBase {
         ->set('db_password', $form_state->getValue('password'))
         ->set('db_address', $form_state->getValue('server_url'))
         ->set('db_database', $form_state->getValue('database'))
+        ->set('smug_mug_password', $form_state->getValue('smugmug_pwd'))
         ->set('sync_encrypt_profile', $form_state->getValue('encrypt_profile'))
         ->save();
 
