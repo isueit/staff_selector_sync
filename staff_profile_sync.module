@@ -40,7 +40,6 @@ function staff_profile_sync_updater() {
   $updated = 0;//Does not mean they were changed, only found
   $created = 0;
 
-  // TODO: Replace with config
   $config = \Drupal::config('staff_profile_sync.settings');
   $encrypt_profile = EncryptionProfile::load($config->get('sync_encrypt_profile'));
   $myServer = $config->get('db_address');
@@ -89,7 +88,7 @@ function staff_profile_sync_updater() {
         $entity->field_department_id->value = $profile->DepartmentName;
         //$entity->field_position_title->value = $profile->UniversityTitle; # Can change
         $entity->field_base_county->value = $base_county;
-        $entity->field_counties_served->value = $counties_served;#TODO check if list duplicated
+        $entity->field_counties_served->value = $counties_served;
 
         $entity->field_from_staff_directory->value = true;
         $entity->setPublished();

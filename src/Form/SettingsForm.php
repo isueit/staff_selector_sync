@@ -87,7 +87,7 @@ class SettingsForm extends ConfigFormBase {
         '#description' => $this->t('The password to unlock the SmugMug Staff Portrait Album. This is not a secure data storage. This field will appear blank even with a password saved.'),
         '#size' => 64,
         '#default_value' => $this->t(""),
-      ); #TODO do we want to use different encryption profile?
+      ); //TODO do we want to use different encryption profile?
 
       // List of encryption profiles for selector
       $encrypt_ids = \Drupal::entityQuery('encryption_profile')->execute();
