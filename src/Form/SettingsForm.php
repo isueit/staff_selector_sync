@@ -89,6 +89,14 @@ class SettingsForm extends ConfigFormBase {
         '#default_value' => $this->t(""),
       ); //TODO do we want to use different encryption profile?
 
+      $form['smugmug_api'] = array(
+        '#type' => 'textfield',
+        '#title' => $this->t('Smugmug Api Key'),
+        '#description' => $this->t('Smug Mug API key'),
+        '#size' => 64,
+        '#default_value' => $config->get('smug_mug_api_key'),
+      );
+
       // List of encryption profiles for selector
       $encrypt_ids = \Drupal::entityQuery('encryption_profile')->execute();
       $encrypt_list = array();
@@ -155,6 +163,7 @@ class SettingsForm extends ConfigFormBase {
         ->set('db_address', $form_state->getValue('server_url'))
         ->set('db_database', $form_state->getValue('database'))
         ->set('smug_mug_password', $form_state->getValue('smugmug_pwd'))
+        ->set('smug_mug_api_key', $form_state->getValue('smugmug_api'))
         ->set('sync_encrypt_profile', $form_state->getValue('encrypt_profile'))
         ->save();
 
