@@ -67,6 +67,7 @@ function staff_profile_sync_updater() {
       array_push($counties_served, (!empty($taxon) ? array_keys($taxon)[0] : ""));
     }
 
+
     foreach ($local_profiles as $entity) {
       $db_netid = explode("@",$profile->email)[0];
 
@@ -134,41 +135,57 @@ function staff_profile_sync_updater() {
 /**
  * Pull image url from smugmug by netid
  */
-function getSmugMugAPI($album, $cookie = FALSE, $api_key = FALSE) {
+function getSmugMugAPI($album, $cookie = FALSE) {
   $config = \Drupal::config('staff_profile_sync.settings');
   $encrypt_profile = EncryptionProfile::load($config->get('sync_encrypt_profile'));
   $api_key = \Drupal::service('encryption')->decrypt( $config->get('smug_mug_api_key'), $encrypt_profile);
-
-  $curl = curl_init('https://api.smugmug.com/api/v2/album/' . $album . '!images');
+  $curl = curl_init('https://api.smugmug.com/api/v2/album/' . $album . '!images?APIKey=' . $api_key);
 
   curl_setopt($curl, CURLOPT_HTTPGET, 1);
   curl_setopt($curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
   curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-  //$header = array('Content-Type: application/json',);
-  if ($api_key) {$header[] = 'APIKEY: ' . $api_key;}
-  if ($cookie) {$header[] = 'cookie: ' . array_keys($cookie)[0] . '=' . $cookie[array_keys($cookie)[0]];}
-  curl_setopt($curl, CURLOPT_HTTPHEADER, $header);
-  $return = curl_exec($curl);
+  $header = array('Accept: application/json');
+  if ($cookie) {
+    $header[] = 'cookie: ' . array_keys($cookie)[0] . '=' . $cookie[array_keys($cookie)[0]];
+  }
+  if (isset($header)) {
+    curl_setopt($curl, CURLOPT_HTTPHEADER, $header);
+  }
+  $return = json_decode(curl_exec($curl));
   curl_close($curl);
-  return $return);
+  return $return->Response->AlbumImage;
+
+  // Return is an array of image objects
+  // $image->ThumbnailUrl - thumbnail url
+  // $image->Title - title
 }
 
 /**
- *
+ * Get cookie to send with request to protected album
  */
 function getSmugMugCookie($album) {
   $config = \Drupal::config('staff_profile_sync.settings');
   $encrypt_profile = EncryptionProfile::load($config->get('sync_encrypt_profile'));
   $api_key = \Drupal::service('encryption')->decrypt($config->get('smug_mug_api_key'), $encrypt_profile);
-
-  $curl = curl_init();
-  curl_setopt($curl, CURLOPT_POST, 1);
   $album_pwd = \Drupal::service('encryption')->decrypt($config->get('smug_mug_password'), $encrypt_profile);
-  curl_setopt($curl, CURLOPT_POSTFIELDS, array('password' => $album_pwd));
-  curl_setopt($curl, CURLOPT_URL, "https://api.smugmug.com/api/v2/album/" . $album . '!unlock');
-  curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+
+  //Get the nodeID from node containing album
+  $curl = curl_init('https://api.smugmug.com/api/v2/album/' . $album . 'APIKey=' . $api_key);
+  curl_setopt($curl, CURLOPT_HTTPGET, 1);
+  curl_setopt($curl, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST);
+  curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+  curl_setopt($curl, CURLOPT_HTTPHEADER, array('Accept: application/json'));
+  $album_json = json_decode(curl_exec($curl));
+  curl_close($curl);
+  $nodeID = $album_json->Response->Album->NodeID;
+
+  //Unlock node and return cookie
+  $curl = curl_init("https://api.smugmug.com/api/v2/node/" . $nodeID . '!unlock?APIKey=' . $api_key);
+  curl_setopt($curl, CURLOPT_POST, 1);
+  curl_setopt($curl, CURLOPT_POSTFIELDS, array('Password' => $album_pwd));
+  curl_setopt($curl, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST);
   curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
   $return = curl_exec($curl);
   curl_close($curl);
-  return $return;
+  return $_COOKIE;
 }
