@@ -97,6 +97,14 @@ class SettingsForm extends ConfigFormBase {
         '#default_value' => $config->get('smug_mug_api_key'),
       );
 
+      $form['smugmug_album'] = array(
+        '#type' => 'textfield',
+        '#title' => $this->t('Smugmug Album ID'),
+        '#description' => $this->t('ID used to identify and connect to the staff portrait album on SmugMug.'),
+        '#size' => 64,
+        '#default_value' => $config->get('smug_mug_album_id'),
+      );
+
       // List of encryption profiles for selector
       $encrypt_ids = \Drupal::entityQuery('encryption_profile')->execute();
       $encrypt_list = array();

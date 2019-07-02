@@ -3,6 +3,7 @@
 use \Drupal\Core\Entity\EntityInterface;
 use \Drupal\Core\Entity\EntityStorageInterface;
 use \Drupal\encrypt\Entity\EncryptionProfile;
+use \Drupal\file\Entity\File;
 
 /**
  * @file staff_profile_sync.module
@@ -41,6 +42,15 @@ function staff_profile_sync_updater() {
   $created = 0;
 
   $config = \Drupal::config('staff_profile_sync.settings');
+
+  $cookie = getSmugMugCookie();
+  $json_images = getSmugMugAPI($config->get('smug_mug_album_id'));
+  //Put images in associative array by netid
+  $images = array();
+  foreach ($json_images as $img) {
+    $images[$img->Title] = $img;
+  }
+
   $encrypt_profile = EncryptionProfile::load($config->get('sync_encrypt_profile'));
   $myServer = $config->get('db_address');
   $myUser = $config->get('db_username');
@@ -91,6 +101,29 @@ function staff_profile_sync_updater() {
         $entity->field_base_county->value = $base_county;
         $entity->field_counties_served->value = $counties_served;
 
+        if(isset($files[$db_netid])) {
+          $file_url = $files[$db_netid]->ThumbnailUrl;
+          if (is_null($entity->field_profile_image__target_id->value)) {
+            //Create file entity, no id found
+            $file = File::create([
+              'uri' => $file_url,
+              'uid' => currentUser()->id(),
+              'filename' => end(explode('/', $file_url)),
+              'status' => 1,
+            ]);
+            $file->save();
+            $entity->field_profile_image__target_id->value = $file->fid;
+          } else {
+            //Set uri to new uri
+            $file = File::load($entity->field_profile_image__target_id->value);
+            $file->set('uri', $file_url);
+            $file->save();
+          }
+        } else {
+          // Remove Association if it is not found
+          //$entity->field_profile_image__target_id->value = NULL;
+        }
+
         $entity->field_from_staff_directory->value = true;
         $entity->setPublished();
         $entity->save();
@@ -99,6 +132,16 @@ function staff_profile_sync_updater() {
       }
     }
     if (!$found) {
+      if(isset($files[$db_netid])) {
+        $file_url = $files[$db_netid]->ThumbnailUrl;
+        $file = File::create([
+          'uri' => $file_url,
+          'uid' => currentUser()->id(),
+          'filename' => end(explode('/', $file_url)),
+          'status' => 1,
+        ]);
+        $file->save();
+      }
       $newEntity = \Drupal\staff_profile\Entity\StaffProfile::create([
         'field_first_name' => $profile->FirstName,
         'field_last_name' => $profile->LastName,
@@ -118,6 +161,7 @@ function staff_profile_sync_updater() {
         'field_base_county' => $base_county,
         'field_counties_served' => $counties_served,
         'field_from_staff_directory' => true,
+        'field_profile_image__target_id' => (isset($files[$db_netid]) ? $file->fid : NULL),
       ]);
       $newEntity->setPublished();
       $newEntity->save();
@@ -163,14 +207,14 @@ function getSmugMugAPI($album, $cookie = FALSE) {
 /**
  * Get cookie to send with request to protected album
  */
-function getSmugMugCookie($album) {
+function getSmugMugCookie($node) {
   $config = \Drupal::config('staff_profile_sync.settings');
   $encrypt_profile = EncryptionProfile::load($config->get('sync_encrypt_profile'));
   $api_key = \Drupal::service('encryption')->decrypt($config->get('smug_mug_api_key'), $encrypt_profile);
   $album_pwd = \Drupal::service('encryption')->decrypt($config->get('smug_mug_password'), $encrypt_profile);
 
   //Get the nodeID from node containing album
-  $curl = curl_init('https://api.smugmug.com/api/v2/album/' . $album . 'APIKey=' . $api_key);
+  $curl = curl_init('https://api.smugmug.com/api/v2/album/' . $album . '?APIKey=' . $api_key);
   curl_setopt($curl, CURLOPT_HTTPGET, 1);
   curl_setopt($curl, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST);
   curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
