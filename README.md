@@ -13,8 +13,10 @@ Staff profiles are created and/or updated in the following circumstances:
 When the sync runs from the staff_profile_sync_updater() function, all entities not found in the secondary database will be marked as unpublished, all entities found will be updated and all data that lacks an associated entity will have entities created.
 
 ## Note
-This addon takes data from a secondary database and incorporates it into your site.
-The address and authentication information can be found in the [staff_profile_sync.module](staff_profile_sync.module) file. This should be changed prior to your deployment. Do not commit your changes to this database connection to this repository.
+This Addon requires authentication from the staff database and smugmug.
+The staff database connection requires credentials, the database name and database url.
+The SmugMug API connection requires the node unlock password and API key.
 
 ## Prerequisites
  - staff_profile module
+ - encrypt and key modules

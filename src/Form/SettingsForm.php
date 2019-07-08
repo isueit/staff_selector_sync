@@ -92,17 +92,9 @@ class SettingsForm extends ConfigFormBase {
       $form['smugmug_api'] = array(
         '#type' => 'textfield',
         '#title' => $this->t('Smugmug Api Key'),
-        '#description' => $this->t('Smug Mug API key'),
+        '#description' => $this->t('Smug Mug API key. This will appear blank even when there is a saved api key'),
         '#size' => 64,
-        '#default_value' => $config->get('smug_mug_api_key'),
-      );
-
-      $form['smugmug_album'] = array(
-        '#type' => 'textfield',
-        '#title' => $this->t('Smugmug Album ID'),
-        '#description' => $this->t('ID used to identify and connect to the staff portrait album on SmugMug.'),
-        '#size' => 64,
-        '#default_value' => $config->get('smug_mug_album_id'),
+        '#default_value' => $this->t(""),
       );
 
       // List of encryption profiles for selector

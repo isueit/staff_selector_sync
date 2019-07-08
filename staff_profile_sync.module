@@ -168,7 +168,13 @@ function staff_profile_sync_updater() {
   \Drupal::logger('staff_profile_sync')->info("Staff Profile Sync Succeded. \r\n" . $updated . " Profiles updated and " . $created . " Profiles created.");
 }
 
-
+/**
+ * Get request to smugmug API V2
+ * Node: string- "/api/v2/<node type>/<node id>"
+ * Cookie: string- "SMSESS=<cookie>"
+ * API key: string, use key from config
+ * Function: string "!<operation", see smugmug api
+ */
 function smugMugApiGET($node, $cookie, $api_key, $function = '') {
   $curl = curl_init('https://api.smugmug.com' . $node . $function . '?APIKey=' . $api_key);
   curl_setopt($curl, CURLOPT_HTTPGET, 1);
@@ -185,6 +191,11 @@ function smugMugApiGET($node, $cookie, $api_key, $function = '') {
   return $result;
 }
 
+/**
+ * Unlock a node and get the cookie from smugmug for further requests
+ * See smugMugApiGET for node, api key and function formatting
+ * Password: string, use unlock password from config
+ */
 function smugMugApiPOST($node, $password, $api_key, $function = '!unlock') {
   $curl = curl_init('https://api.smugmug.com' . $node . $function . '?APIKey=' . $api_key);
   curl_setopt($curl, CURLOPT_POST, 1);
@@ -199,6 +210,9 @@ function smugMugApiPOST($node, $password, $api_key, $function = '!unlock') {
   return $smsess[0];
 }
 
+/**
+ * Get images from a given Smugmug user and folder
+ */
 function smugMugGetImages($user, $folder) {
   $config = \Drupal::config('staff_profile_sync.settings');
   $encrypt_profile = EncryptionProfile::load($config->get('sync_encrypt_profile'));
@@ -235,6 +249,5 @@ function smugMugGetImages($user, $folder) {
       $return[$image->Title] = $image;
     }
   }
-
   return $return;
 }
