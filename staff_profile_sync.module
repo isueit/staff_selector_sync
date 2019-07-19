@@ -95,27 +95,11 @@ function staff_profile_sync_updater() {
         $entity->field_base_county->value = $base_county;
         $entity->field_counties_served->value = $counties_served;
 
-        if(isset($files[$db_netid])) {
-          $file_url = $files[$db_netid]->ThumbnailUrl;
-          if (is_null($entity->field_profile_image__target_id->value)) {
-            //Create file entity, no id found
-            $file = File::create([
-              'uri' => $file_url,
-              'uid' => currentUser()->id(),
-              'filename' => end(explode('/', $file_url)),
-              'status' => 1,
-            ]);
-            $file->save();
-            $entity->field_profile_image__target_id->value = $file->fid;
-          } else {
-            //Set uri to new uri
-            $file = File::load($entity->field_profile_image__target_id->value);
-            $file->set('uri', $file_url);
-            $file->save();
-          }
+        //Add smugmug image if it exists, else clear field
+        if (array_key_exists($db_netid, $files)) {
+          $entity->field_profile_smugmug_image = $files[$db_netid]->ThumbnailUrl;
         } else {
-          // Remove Association if it is not found
-          //$entity->field_profile_image__target_id->value = NULL;
+          $entity->field_profile_smugmug_image = NULL;
         }
 
         $entity->field_from_staff_directory->value = true;
@@ -126,16 +110,6 @@ function staff_profile_sync_updater() {
       }
     }
     if (!$found) {
-      if(isset($files[$db_netid])) {
-        $file_url = $files[$db_netid]->ThumbnailUrl;
-        $file = File::create([
-          'uri' => $file_url,
-          'uid' => currentUser()->id(),
-          'filename' => end(explode('/', $file_url)),
-          'status' => 1,
-        ]);
-        $file->save();
-      }
       $newEntity = \Drupal\staff_profile\Entity\StaffProfile::create([
         'field_first_name' => $profile->FirstName,
         'field_last_name' => $profile->LastName,
@@ -155,7 +129,7 @@ function staff_profile_sync_updater() {
         'field_base_county' => $base_county,
         'field_counties_served' => $counties_served,
         'field_from_staff_directory' => true,
-        'field_profile_image__target_id' => (isset($files[$db_netid]) ? $file->fid : NULL),
+        'field_profile_smugmug_image' => (isset($files[$db_netid]) ? $files[$db_netid]->ThumbnailUrl : NULL),
       ]);
       $newEntity->setPublished();
       $newEntity->save();
