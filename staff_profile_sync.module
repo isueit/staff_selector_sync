@@ -48,7 +48,7 @@ function staff_profile_sync_updater() {
   $encrypt_profile = EncryptionProfile::load($config->get('sync_encrypt_profile'));
   $myServer = $config->get('db_address');
   $myUser = $config->get('db_username');
-  $myPass = \Drupal::service('encryption')->decrypt( $config->get('db_password'), $encryption_profile);
+  $myPass = \Drupal::service('encryption')->decrypt( $config->get('db_password'), $encrypt_profile);
   $myDB = $config->get('db_database');
 
   $dbhandle = sqlsrv_connect($myServer, array("Database" => $myDB, "UID" => $myUser, "PWD" => $myPass))
