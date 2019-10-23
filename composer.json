@@ -10,6 +10,7 @@
       }
   },
   "require": {
+    "drupal/encrypt": "^3.0@RC",
     "isueit/staff_profile": "dev-master"
   }
 }
