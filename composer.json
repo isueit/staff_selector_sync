@@ -1,5 +1,5 @@
 {
-  "name": "isuit/staff_profile_sync",
+  "name": "isueit/staff_profile_sync",
   "type": "drupal-custom-module",
   "description": "Module to Create sync staff_profile content type",
   "extra": {
@@ -8,5 +8,8 @@
               "drush.services.yml": "^9"
           }
       }
+  },
+  "require": {
+    "isueit/staff_profile": "dev-master"
   }
 }
