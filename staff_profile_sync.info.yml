@@ -5,7 +5,8 @@ core: '8.x'
 version: '8.x-1.0-dev'
 package: 'ISUEO'
 dependencies:
-  - staff_profile
-  - encrypt
-  - key
+  - isueit/staff_profile
+  - drupal/encrypt
+  - drupal/key
+  - drupal/real_aes
 configure: staff_profile_sync.sync_settings_form
