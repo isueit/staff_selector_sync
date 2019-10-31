@@ -141,6 +141,14 @@ class SettingsForm extends ConfigFormBase {
       } else {
         $form_state->setValue('smugmug_pwd', \Drupal::service('encryption')->encrypt($new_pwd_smug, $encrypt_profile));
       }
+
+      $saved_api_smug = $config->get('smug_mug_api_key');
+      $new_api_smug = $form_state->getValue('smugmug_api');
+      if (empty($new_api_smug)) {
+        $form_state->setValue('smugmug_api', $saved_api_smug);
+      } else {
+        $form_state->setValue('smugmug_api', \Drupal::service('encryption')->encrypt($new_api_smug, $encrypt_profile));
+      }
     }
 
     /**

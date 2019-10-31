@@ -1,4 +1,5 @@
 <?php
+//TODO: get the firstname lastname switched to netids when images on smugmug have netids associated
 
 use \Drupal\Core\Entity\EntityInterface;
 use \Drupal\Core\Entity\EntityStorageInterface;
@@ -70,6 +71,7 @@ function staff_profile_sync_updater() {
       $taxon = taxonomy_term_load_multiple_by_name($county, 'counties-in-iowa');
       array_push($counties_served, (!empty($taxon) ? array_keys($taxon)[0] : ""));
     }
+    $nameString = $profile->FirstName . " " . $profile->LastName;
 
 
     foreach ($local_profiles as $entity) {
@@ -81,23 +83,26 @@ function staff_profile_sync_updater() {
         //$entity->field_first_name->value = $profile->FirstName; # Can change
         $entity->field_last_name->value = $profile->LastName;
         $entity->field_email->value = $profile->email;
-        $entity->field_address_1->value = $profile->Address1;
-        $entity->field_address_2->value = $profile->Address2;
-        $entity->field_city->value = $profile->City;
-        $entity->field_state->value = $profile->State;
-        $entity->field_zip->value = $profile->Zip;
+        $entity->field_address = [
+          'country_code' => 'US',
+          'address_line1' => $profile->Address1,
+          'address_line2' => $profile->Address2,
+          'locality' => $profile->City,
+          'administrative_area' => $profile->State,
+          'postal_code' => $profile->Zip,
+        ];
         $entity->field_phone->value = $profile->Phone;
         //$entity->field_phone_2->value = $profile->Fax;
         $entity->field_extension_region->value = $profile->ExtensionArea;
         $entity->field_location->value = $profile->Location;
         $entity->field_department_id->value = $profile->DepartmentName;
         //$entity->field_position_title->value = $profile->UniversityTitle; # Can change
-        $entity->field_base_county->value = $base_county;
-        $entity->field_counties_served->value = $counties_served;
+        $entity->field_base_county = $base_county;
+        $entity->field_counties_served = $counties_served;
 
         //Add smugmug image if it exists, else clear field
-        if (array_key_exists($db_netid, $files)) {
-          $entity->field_profile_smugmug_image = $files[$db_netid]->ThumbnailUrl;
+        if ($files != null && array_key_exists($nameString, $files)) {
+          $entity->field_profile_smugmug_image = $files[$nameString]->ThumbnailUrl;
         } else {
           $entity->field_profile_smugmug_image = NULL;
         }
@@ -107,6 +112,7 @@ function staff_profile_sync_updater() {
         $entity->save();
         $found = true;
         $updated++;
+        break;
       }
     }
     if (!$found) {
@@ -114,11 +120,7 @@ function staff_profile_sync_updater() {
         'field_first_name' => $profile->FirstName,
         'field_last_name' => $profile->LastName,
         'field_email' => $profile->email,
-        'field_address_1' => $profile->Address1,
-        'field_address_2' => $profile->Address2,
-        'field_city' => $profile->City,
-        'field_state' => $profile->State,
-        'field_zip' => $profile->Zip,
+        'field_address' => null,
         'field_phone' => $profile->Phone,
         //'field_phone_2' => $profile->Fax,
         'field_extension_region' => $profile->ExtensionArea,
@@ -129,8 +131,16 @@ function staff_profile_sync_updater() {
         'field_base_county' => $base_county,
         'field_counties_served' => $counties_served,
         'field_from_staff_directory' => true,
-        'field_profile_smugmug_image' => (isset($files[$db_netid]) ? $files[$db_netid]->ThumbnailUrl : NULL),
+        'field_profile_smugmug_image' => (isset($files[$nameString]) ? $files[$nameString]->ThumbnailUrl : NULL),
       ]);
+      $newEntity->field_address = [
+        'country_code' => 'US',
+        'address_line1' => $profile->Address1,
+        'address_line2' => $profile->Address2,
+        'locality' => $profile->City,
+        'administrative_area' => $profile->State,
+        'postal_code' => $profile->Zip,
+      ];
       $newEntity->setPublished();
       $newEntity->save();
       $created++;
@@ -190,7 +200,7 @@ function smugMugApiPOST($node, $password, $api_key, $function = '!unlock') {
 function smugMugGetImages($user, $folder) {
   $config = \Drupal::config('staff_profile_sync.settings');
   $encrypt_profile = EncryptionProfile::load($config->get('sync_encrypt_profile'));
-  $api_key = \Drupal::service('encryption')->decrypt( $config->get('smug_mug_api_key'), $encrypt_profile);
+  $api_key = \Drupal::service('encryption')->decrypt($config->get('smug_mug_api_key'), $encrypt_profile);
   $password = \Drupal::service('encryption')->decrypt($config->get('smug_mug_password'), $encrypt_profile);
 
   //Get authentication cookie
@@ -216,6 +226,7 @@ function smugMugGetImages($user, $folder) {
   }
 
   //Create return images
+  $return = [];
   foreach ($albumNodeIds as $albumNodeId) {
     $albumId = smugMugApiGET($albumNodeId, $cookie, $api_key);
     $images = smugMugApiGET($albumId->Response->Node->Uris->Album->Uri, $cookie, $api_key, '!images');
